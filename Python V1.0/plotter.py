@@ -50,7 +50,7 @@ def plot_figure():
     global inputs
 
     # Plot Variables
-    plt.ylim(0, 3.3)
+    plt.ylim(-0.1, 3.5)
     plt.title("Analogue Piezo Input")
     plt.grid(True)
     plt.ylabel('Voltage Level (V)')
@@ -84,9 +84,10 @@ def plotter():
     global plot_data
     global figure_capture
     global exit_now
+    global reset
 
     # Plot Configuration
-    # style.use('fivethirtyeight')
+    style.use('seaborn-notebook')
     # fig = plt.figure()
     # axis = fig.add_subplot(1, 1, 1)
 
@@ -109,6 +110,10 @@ def plotter():
             print("Plotter is CLosing")
             return
 
+        if reset:
+            while reset:
+                pass
+
 
 
 
@@ -122,6 +127,7 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
     # Establish Serial Communication
     global plot_data
     global exit_now
+    global reset
 
     try:
         serial_main = serial
@@ -209,6 +215,16 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
             print("Serial Connection Closing")
             return
 
+        if reset:
+            window = 0
+            decay = 0
+            sample = []
+            for i in range(n_inputs):
+                sample.append(0)
+            flag_get = False
+            while reset:
+                pass
+
 
 
 ##########################################
@@ -221,6 +237,8 @@ def main():
     global inputs
     global figure_capture
     global exit_now
+    global plot_data
+    global reset
 
     ##########################################
     ##########     CONTROL ROOM    ###########
@@ -228,15 +246,15 @@ def main():
 
     com = 'COM3'        # Arduino Communication Port
     baudrate = 2000000  # Arduino Baudrate Communication
-    inputs = 3          # How Many Arduino Inputs Reading
+    inputs = 2          # How Many Arduino Inputs Reading
 
     # Control Variables
-    window_ref = 50
-    grid_ref = 10000
-    maxamp_ref = 50
-    decay_ref = 500
-    flag_continuously = False
-    sample_ref = 10
+    window_ref = 50             # How Many Samples Before Useful Data
+    grid_ref = 10000            # How Many Samples will the grid Contain
+    maxamp_ref = 50             # From what value is the Data useful
+    decay_ref = 500             # How many samples after the data goes below threshold
+    flag_continuously = True    # Continuous Graph or Sample Data above threshold
+    sample_ref = 10             # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
 
     ##########################################
     ##########   EOF CONTROL ROOM  ###########
@@ -245,6 +263,7 @@ def main():
     # Counters and Misc
     figure_capture = False
     exit_now = False
+    reset = False
 
     # Thread Definition
     thread_serial = threading.Thread(name='Serial_Communication', target=serial_com, args=(com, baudrate, inputs,
@@ -256,8 +275,8 @@ def main():
     thread_plotter.start()
 
     # Accept User Input
+    user_input = input("Tip: In case of doubt use the 'help' command\nINSERT YOUR COMMAND:")
     while True:
-        user_input = input("INSERT YOUR COMMAND: ")
 
         # Analysis on Captured Figure
         if user_input == 'stop':
@@ -270,12 +289,26 @@ def main():
             exit_now = True
             break
 
+        # Reset List
+        elif user_input == 'reset':
+            reset = True
+            time.sleep(1)
+            plot_data = []
+            for i in range(inputs):
+                plot_data.append([])
+            reset = False
+
+
         # Help Command
         elif user_input == 'help':
-            print("stop - Capture Image Point to Analyse\n" +
-                  "exit - Exit Program Safely (Serial)\n" +
-                  "help - Displays this Menu\n" +
+            print("\n" +
+                  "-->     stop  - Capture Image to Analyse\n" +
+                  "-->     exit  - Exit Program Safely (Serial)\n" +
+                  "-->     help  - Displays this Menu\n" +
+                  "-->     reset - Resets Graphical Data\n" +
                   "")
+
+        user_input = input("INSERT YOUR COMMAND: ")
 
     # Waits for Work to Finish
     thread_serial.join()

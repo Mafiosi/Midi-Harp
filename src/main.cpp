@@ -67,12 +67,12 @@ void loop()
   // read A0
   int val1 = analogRead(2);
   // read A1
-  int val2 = 500;
+  int val2 = analogRead(4);
   // print to serial
   Serial.print(val1);
   Serial.print(",");
   Serial.print(val2);
   Serial.print("\n");
   // wait
-  delay(5);
+  delay(10);
 }
