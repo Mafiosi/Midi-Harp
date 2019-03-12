@@ -27,10 +27,16 @@ import numpy as np
 
 # Global Variables
 global plot_data
-plot_data = []
+global plot_time
 global inputs
 global figure_capture
+global flag_continuously
+global flag_plot
 global exit_now
+
+# Global Variables Declaration
+plot_data = []
+plot_time = []
 
 # Plot General Configs
 plt.ion()
@@ -42,16 +48,19 @@ matplotlib.use("TkAgg")
 #########    PLOT FUNCTIONS    ###########
 ##########################################
 
-
+# Data Plot Graph
 def plot_figure():
 
     # Declaration
     global plot_data
+    global avg_point
+    global high_volt
+    global flag_continuously
     global inputs
 
     # Plot Variables
-    plt.ylim(-0.1, 3.5)
-    plt.title("Analogue Piezo Input")
+    plt.ylim(-0.1, high_volt*1.1)
+    plt.title("Analogue Piezo Input - Avg Point: " + str(round(avg_point/1000000, 4)) + " ms")
     plt.grid(True)
     plt.ylabel('Voltage Level (V)')
     plt.ticklabel_format(useOffset=False)
@@ -77,19 +86,18 @@ def plot_figure():
         plt.legend(loc='upper right')
 
 
-
+# Thread for Plotting Graphs
 def plotter():
 
     # Create Data Plot Size
     global plot_data
     global figure_capture
+    global flag_continuously
     global exit_now
     global reset
 
     # Plot Configuration
     style.use('seaborn-notebook')
-    # fig = plt.figure()
-    # axis = fig.add_subplot(1, 1, 1)
 
     # Plotter Cycle
     while True:
@@ -115,8 +123,6 @@ def plotter():
                 pass
 
 
-
-
 ##########################################
 #########  SERIAL FUNCTIONS    ###########
 ##########################################
@@ -126,7 +132,10 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
 
     # Establish Serial Communication
     global plot_data
+    global plot_time
+    global high_volt
     global exit_now
+    global avg_point
     global reset
 
     try:
@@ -137,14 +146,18 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
         return
 
     # Create Data Plot Size
-    global plot_data
     for i in range(n_inputs):
         plot_data.append([])
+    for i in range(n_inputs):
+        plot_time.append([])
 
     # Counters and Misc
     window = 0
     decay = 0
+    avg_point = 0
+    maxamp_ref = maxamp_ref*1023/high_volt
     sample = []
+    time_base = time.perf_counter_ns()
     for i in range(n_inputs):
         sample.append(0)
     flag_get = False
@@ -164,7 +177,8 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
                     # If samples are below threshold point
                     if not flag_continuously:
                         if window <= window_ref and int(split_data[i]) < maxamp_ref:
-                            plot_data[i].append(int(split_data[i])*3.3/1023)
+                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                            plot_time[i].append(time.perf_counter_ns()-time_base)
                             window = window + 1
 
                         # If more than enough samples have been collected
@@ -172,7 +186,8 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
 
                             # Check if samples are being collected
                             if flag_get is True:
-                                plot_data[i].append(int(split_data[i])*3.3/1023)
+                                plot_data[i].append(int(split_data[i])*high_volt/1023)
+                                plot_time[i].append(time.perf_counter_ns()-time_base)
                                 decay = decay + 1
 
                                 # Check about decay after collecting sample
@@ -180,23 +195,38 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
                                     decay = 0
                                     window = 0
                                     flag_get = False
+                                    avg_point = plot_time[0][-1]/decay_ref
                             else:
                                 pass
 
-                        # Check if dat is useful
+                        # Check if data is useful
                         elif int(split_data[i]) > maxamp_ref:
-                            plot_data[i].append(int(split_data[i])*3.3/1023)
-                            window = window_ref + 1
+                            # Updates Time Base
+                            if flag_get is False:
+                                window = window_ref + 1
+                                time_base = time.perf_counter_ns()
                             flag_get = True
+
+                            # Append New data above threshold
+                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                            plot_time[i].append(time.perf_counter_ns()-time_base)
 
                     # Continuous Mode
                     else:
                         if sample[i] == 0:
-                            plot_data[i].append(int(split_data[i])*3.3/1023)
+                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                            plot_time[i].append(time.perf_counter_ns()-time_base)
+                            avg_point = (plot_time[0][-1] - plot_time[0][0])/len(plot_time[i])
                             sample[i] = sample[i] + 1
-                        elif sample[i] <= sample_ref:
+                        elif sample[i] == sample_ref:
+                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                            plot_time[i].append(time.perf_counter_ns()-time_base)
+                            avg_point = (plot_time[0][-1] - plot_time[0][0])/len(plot_time[i])
+                            sample[i] = 0
+                        elif sample[i] < sample_ref:
                             sample[i] = sample[i] + 1
                         else:
+                            print("Error in Serial, Should Not Happen")
                             sample[i] = 0
 
                 except:
@@ -210,6 +240,7 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
         for i in range(n_inputs):
             if len(plot_data[i]) > grid_ref:
                 plot_data[i].pop(0)
+                plot_time[i].pop(0)
 
         if exit_now is True:
             print("Serial Connection Closing")
@@ -226,7 +257,6 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
                 pass
 
 
-
 ##########################################
 ##########    MAIN FUNCTION    ###########
 ##########################################
@@ -238,23 +268,27 @@ def main():
     global figure_capture
     global exit_now
     global plot_data
+    global plot_time
+    global high_volt
+    global flag_continuously
     global reset
 
     ##########################################
     ##########     CONTROL ROOM    ###########
     ##########################################
 
-    com = 'COM3'        # Arduino Communication Port
-    baudrate = 2000000  # Arduino Baudrate Communication
-    inputs = 2          # How Many Arduino Inputs Reading
+    com = 'COM6'        # Arduino Communication Port
+    baudrate = 115200  # Arduino Baudrate Communication
+    inputs = 1          # How Many Arduino Inputs Reading
 
     # Control Variables
-    window_ref = 50             # How Many Samples Before Useful Data
-    grid_ref = 10000            # How Many Samples will the grid Contain
-    maxamp_ref = 50             # From what value is the Data useful
-    decay_ref = 500             # How many samples after the data goes below threshold
-    flag_continuously = True    # Continuous Graph or Sample Data above threshold
-    sample_ref = 10             # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
+    window_ref = 50                 # How Many Samples Before Useful Data
+    grid_ref = 1300                # How Many Samples will the grid Contain
+    maxamp_ref = 0.5                  # From what value is the Data useful (Volts)
+    decay_ref = 1000                # How many samples after the data goes below threshold
+    high_volt = 5.0                 # What is the maximum voltage accepted by the microcontroller (Volts)
+    flag_continuously = False       # Continuous Graph or Sample Data above threshold
+    sample_ref = 1                  # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
 
     ##########################################
     ##########   EOF CONTROL ROOM  ###########
@@ -264,6 +298,13 @@ def main():
     figure_capture = False
     exit_now = False
     reset = False
+
+    # Check for Correct Behaviour
+    try:
+        serial.Serial(com, baudrate, timeout=1)
+    except:
+        print("No Devices Connected\nExiting Program")
+        return
 
     # Thread Definition
     thread_serial = threading.Thread(name='Serial_Communication', target=serial_com, args=(com, baudrate, inputs,
@@ -294,10 +335,12 @@ def main():
             reset = True
             time.sleep(1)
             plot_data = []
+            plot_time = []
             for i in range(inputs):
                 plot_data.append([])
-            reset = False
+                plot_time.append([])
 
+            reset = False
 
         # Help Command
         elif user_input == 'help':
@@ -307,6 +350,9 @@ def main():
                   "-->     help  - Displays this Menu\n" +
                   "-->     reset - Resets Graphical Data\n" +
                   "")
+
+        else:
+            print("Command not Found, Type 'help' to display help Menu\n")
 
         user_input = input("INSERT YOUR COMMAND: ")
 
