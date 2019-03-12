@@ -55,24 +55,27 @@ void loop()
 // electronut.in
 
 #include "Arduino.h"
+elapsedMicros time_data;
 
 void setup()
 {
   // initialize serial comms
-  Serial.begin(2000000);
+  Serial.begin(115200);
 }
 
 void loop()
 {
   // read A0
-  int val1 = analogRead(2);
-  // read A1
-  int val2 = analogRead(4);
+  int val1 = analogRead(6);
+  //int temp_time = time_data;
+  //time_data = 0;
+
   // print to serial
   Serial.print(val1);
-  Serial.print(",");
-  Serial.print(val2);
+  //Serial.print(",");
+  //Serial.print(temp_time);
   Serial.print("\n");
+
   // wait
-  delay(10);
+  delay(1);
 }
