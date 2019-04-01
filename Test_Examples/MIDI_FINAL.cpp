@@ -39,10 +39,11 @@ byte unsigned general_timer_value = 250;   // HOW MUCH TIME BETWEEN READING
 int unsigned single_timer_value = 350;    // HOW MUCH TIME BETWEEN READING SAME INPUT
 
 //MIDI CONTROL VARIABLES
-const byte unsigned threshold_MIN = 38;     // MINIMUM VALUE TO ACCEPT AS MESSAGE (0.1 Volt)
-const int unsigned threshold_MAX = 775;     // MAXIMUM VALUE EQUAL TO MAX MIDI VELOCITY (2.5 Volt)
-const byte unsigned threshold_MIN_OFF = 16; // MINIMUM VALUE TO SEND MIDI NOTE OFF (0.05 Volt)
-const int unsigned threshold_delay = 1000;  // MINIMUM VALUE TO WAIT AFTER SENDING MIDI OFF
+const byte unsigned threshold_MIN = 38;       // MINIMUM VALUE TO ACCEPT AS MESSAGE (0.1 Volt)
+const int unsigned threshold_MAX = 775;       // MAXIMUM VALUE EQUAL TO MAX MIDI VELOCITY (2.5 Volt)
+const byte unsigned threshold_MIN_OFF = 16;   // MINIMUM VALUE TO SEND MIDI NOTE OFF (0.05 Volt)
+const int unsigned threshold_MIDI_OFF = 200;  // MINIMUM VALUE TO WAIT TO SEND MIFI OFF AFTER INITIAL DELAY (Microsecond)
+const int unsigned threshold_delay = 1000 + threshold_MIDI_OFF;    // MINIMUM VALUE TO WAIT AFTER SENDING MIDI OFF (Microsecond)
 
 // SAMPLE CONTROL
 const byte unsigned sample_n_read = 10;  // HOW MANY SAMPLES TO COLLECT MAX
@@ -51,6 +52,8 @@ const byte unsigned sample_n_read = 10;  // HOW MANY SAMPLES TO COLLECT MAX
 const int unsigned threshold_print_MAX = 1023;
 bool print_active = 0;
 const byte fake_value_MIDI_print = 5;
+const byte unsigned message_MIDI_OFF = 0;
+const byte unsigned pin_reset = 10;
 
 /////////////////////////////////////////////////
 /////////     VARIABLES DECLARATION     /////////
@@ -234,38 +237,44 @@ void loop(){
 
       // STATE 2 - SEND MIDI OFF AND RESET
       if(input_state[pin] == 2){
-
         if(played[pin] == 1){
-          MIDI_sendOFF(input_pitch[pin]);
+          if(single_timer[pin] >= threshold_MIDI_OFF){
+            MIDI_sendOFF(input_pitch[pin]);
 
-          //RESET
-          input_state[pin] = 0;
-          played[pin] = 0;
-          single_timer[pin] = 0;
+            //RESET
+            played[pin] = 0;
 
-          // Debug Print
-          if(debug_print){
-            Serial.print("[PIN] - ");
-            Serial.print(pin);
-            Serial.print(" STATE 2 - ");
+            // Debug Print
+            if(debug_print){
+              Serial.print("[PIN] - ");
+              Serial.print(pin);
+              Serial.print(" STATE 2 - ");
+            }
+
+            //Print Graph Value
+            if(Serial_print == 1){
+              prints[pin*2] = analogRead(input_pins[pin]);
+              prints[pin*2 + 1] = message_MIDI_OFF;
+              print_active = 1;
+            }
           }
         }
-
         // Wait Tim to Set State to Zero
         else{
           if(single_timer[pin] >= threshold_delay){
+
+            //RESET
             input_state[pin] = 0;
+            played[pin] = 0;
+            single_timer[pin] = 0;
+
+            // Print If Enabled
+            if(Serial_print == 1){
+              prints[pin*2] = analogRead(input_pins[pin]);
+              prints[pin*2 + 1] = pin_reset;
+              print_active = 1;
+            }
           }
-
-          // Print If Enabled
-          else if(Serial_print == 1){
-            input_read[pin] = analogRead(input_pins[pin]);
-            prints[pin*2] = input_read[pin];
-            print_active = 1;
-          }
-
-
-
         }
       }
     }
