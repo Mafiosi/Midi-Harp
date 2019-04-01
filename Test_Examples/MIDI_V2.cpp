@@ -24,9 +24,8 @@ const byte MIDI_CHANNEL = 1;    // MIDI CHANNEL NUMBER
 const byte MIDI_n_inputs = 1;   // HOW MANY INPUTS WILL BE READ
 
 // GENERIC CONTROL VARIABLES
-const bool use_general_timer = 0;             // TIMER BETWEEN ADC USE
+const bool use_general_timer = 1;             // TIMER BETWEEN ADC USE
 const bool Serial_print = 1;                  // PRINT MESSAGES TO SERIAL
-const bool debug_print = 0;                   // Print Debug Messages
 const byte input_pins[MIDI_n_inputs] = {6};   // ANALOGUE INPUT PINS
 const byte input_pitch[MIDI_n_inputs] = {60}; // PITCH ASSOCIATED WITH EACH INPUT
 
@@ -35,23 +34,19 @@ const byte input_pitch[MIDI_n_inputs] = {60}; // PITCH ASSOCIATED WITH EACH INPU
 /////////////////////////////////////////////////
 
 // TIMER CONTROL VARTIABLES
-byte unsigned general_timer_value = 250;   // HOW MUCH TIME BETWEEN READING
-int unsigned single_timer_value = 350;    // HOW MUCH TIME BETWEEN READING SAME INPUT
+byte general_timer_value = 250;   // HOW MUCH TIME BETWEEN READING
+byte single_timer_value = 250;    // HOW MUCH TIME BETWEEN READING SAME INPUT
 
 //MIDI CONTROL VARIABLES
-const byte unsigned threshold_MIN = 38;     // MINIMUM VALUE TO ACCEPT AS MESSAGE (0.1 Volt)
-const int unsigned threshold_MAX = 775;     // MAXIMUM VALUE EQUAL TO MAX MIDI VELOCITY (2.5 Volt)
+const byte unsigned threshold_MIN = 35;     // MINIMUM VALUE TO ACCEPT AS MESSAGE (0.1 Volt)
+const int unsigned threshold_MAX = 775;    // MAXIMUM VALUE EQUAL TO MAX MIDI VELOCITY (2.5 Volt)
 const byte unsigned threshold_MIN_OFF = 16; // MINIMUM VALUE TO SEND MIDI NOTE OFF (0.05 Volt)
-const int unsigned threshold_delay = 1000;  // MINIMUM VALUE TO WAIT AFTER SENDING MIDI OFF
 
 // SAMPLE CONTROL
-const byte unsigned sample_n_read = 10;  // HOW MANY SAMPLES TO COLLECT MAX
+const byte unsigned sample_n_read = 8;  // HOW MANY SAMPLES TO COLLECT MAX
 
 // SERIAL PRINT CONTROL
 const int unsigned threshold_print_MAX = 1023;
-bool print_active = 0;
-const byte fake_value_MIDI_print = 5;
-
 /////////////////////////////////////////////////
 /////////     VARIABLES DECLARATION     /////////
 /////////////////////////////////////////////////
@@ -136,7 +131,6 @@ void loop(){
           // Print If Enabled
           if(Serial_print == 1){
             prints[pin*2] = input_read[pin];
-            print_active = 1;
           }
 
           // Check if conditions are met to collect sample
@@ -144,11 +138,8 @@ void loop(){
             input_state[pin] = 1;
           }
 
-          // Debug Print
-          else if(debug_print && print_active){
-            Serial.print("[PIN] - ");
-            Serial.print(pin);
-            Serial.print(" STATE 0 - ");
+          else if(Serial_print == 1){
+            prints[pin*2 + 1] = 5;
           }
         }
       }
@@ -167,14 +158,6 @@ void loop(){
           // If Print Enable Send Midi Print
           if(Serial_print == 1){
             prints[pin*2 + 1] = input_read[pin];
-            print_active = 1;
-          }
-
-          // Debug Print
-          if(debug_print){
-            Serial.print("[PIN] - ");
-            Serial.print(pin);
-            Serial.print(" STATE 1 - ");
           }
 
           // Reset input_read
@@ -206,91 +189,32 @@ void loop(){
                 input_state[pin] = 2;
               }
 
-              // Print If Enabled (Midi Value)
+              // Reset Counter
+              input_n_sample_read[pin] = 0;
+
+              // Print If Enabled
               if(Serial_print == 1){
                 prints[pin*2 + 1] = input_read[pin];
               }
-
-              // Reset Variables
-              input_n_sample_read[pin] = 0;
-              input_read[pin] = 0;
             }
 
-            // Print Graph Value
+            // Print If Enabled
             if(Serial_print == 1){
               prints[pin*2] = temp;
-              print_active = 1;
-            }
-
-            // Debug Print
-            if(debug_print && input_state[pin] == 1){
-              Serial.print("[PIN] - ");
-              Serial.print(pin);
-              Serial.print(" STATE 1 - ");
             }
           }
         }
       }
 
       // STATE 2 - SEND MIDI OFF AND RESET
-      if(input_state[pin] == 2){
+      if(input_read[pin] == 2){
 
-        if(played[pin] == 1){
-          MIDI_sendOFF(input_pitch[pin]);
+        MIDI_sendOFF(input_pitch[pin]);
 
-          //RESET
-          input_state[pin] = 0;
-          played[pin] = 0;
-          single_timer[pin] = 0;
-
-          // Debug Print
-          if(debug_print){
-            Serial.print("[PIN] - ");
-            Serial.print(pin);
-            Serial.print(" STATE 2 - ");
-          }
-        }
-
-        // Wait Tim to Set State to Zero
-        else{
-          if(single_timer[pin] >= threshold_delay){
-            input_state[pin] = 0;
-          }
-
-          // Print If Enabled
-          else if(Serial_print == 1){
-            input_read[pin] = analogRead(input_pins[pin]);
-            prints[pin*2] = input_read[pin];
-            print_active = 1;
-          }
-
-
-
-        }
+        //RESET
+        input_state[pin] = 0;
+        played[pin] = 0;
       }
-    }
-
-    // PRINT IF NEEDED
-    if((Serial_print == 1) && (print_active == 1)){
-      for(byte unsigned temp = 0; temp < MIDI_n_inputs*2; temp++){
-
-        // IF value is not worth it
-        if(prints[temp] == threshold_print_MAX){
-          Serial.print(fake_value_MIDI_print);
-          Serial.print(",");
-        }
-        else{
-          Serial.print(prints[temp]);
-          Serial.print(",");
-        }
-
-        // Reset prints variables
-        prints[temp] = threshold_print_MAX;
-      }
-
-      Serial.print("\n");
-      // Reset Print Flag
-      print_active = 0;
     }
   }
 }
