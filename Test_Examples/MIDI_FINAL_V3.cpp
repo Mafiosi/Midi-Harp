@@ -21,14 +21,14 @@ void setup()
 
 // MIDI CONTROL VARIABLES
 const byte MIDI_CHANNEL = 1;    // MIDI CHANNEL NUMBER
-const byte MIDI_n_inputs = 2;   // HOW MANY INPUTS WILL BE READ
+const byte MIDI_n_inputs = 1;   // HOW MANY INPUTS WILL BE READ
 
 // GENERIC CONTROL VARIABLES
 const bool use_general_timer = 0;             // TIMER BETWEEN ADC USE
 const bool Serial_print = 1;                  // PRINT MESSAGES TO SERIAL
 const bool debug_print = 0;                   // Print Debug Messages
-const byte input_pins[MIDI_n_inputs] = {9, 12};   // ANALOGUE INPUT PINS
-const byte input_pitch[MIDI_n_inputs] = {64, 60}; // PITCH ASSOCIATED WITH EACH INPUT
+const byte input_pins[MIDI_n_inputs] = {9};   // ANALOGUE INPUT PINS
+const byte input_pitch[MIDI_n_inputs] = {60}; // PITCH ASSOCIATED WITH EACH INPUT
 
 /////////////////////////////////////////////////
 /////////    PERMANENT  CONFIGURATION   /////////
@@ -47,9 +47,8 @@ const int unsigned threshold_MIDI_OFF = 500000;  // MINIMUM VALUE TO WAIT TO SEN
 const int unsigned threshold_delay = 1000;    // MINIMUM VALUE TO WAIT AFTER SENDING MIDI OFF (Microsecond)
 
 // SAMPLE CONTROL
-const byte unsigned sample_n_read = 10;       // HOW MANY SAMPLES TO COLLECT MAX
-const byte unsigned sample_until_stop = 40;   // HOW MANY ZEROS UNTIL SEND MIDI OFF
-const byte unsigned sample_n_max = 5;         // HOW MANY SAMPLES TO DETECT MAX PEAK FOR MIDI
+const byte unsigned sample_n_read = 10;  // HOW MANY SAMPLES TO COLLECT MAX
+const byte unsigned sample_until_stop = 40;
 
 // SERIAL PRINT CONTROL
 const int unsigned threshold_print_MAX = 1023;
@@ -185,7 +184,7 @@ void loop(){
               print_active = 1;
             }
 
-            if(max_counter[pin] == sample_n_max){
+            if(max_counter[pin] == 5){
 
               // Send Midi On Message
               MIDI_sendON(input_pitch[pin], normalizevelocity(input_read[pin]));
