@@ -277,18 +277,18 @@ def main():
     ##########     CONTROL ROOM    ###########
     ##########################################
 
-    com = 'COM6'        # Arduino Communication Port
-    baudrate = 115200  # Arduino Baudrate Communication
+    com = 'COM3'        # Arduino Communication Port
+    baudrate = 2000000  # Arduino Baudrate Communication
     inputs = 1          # How Many Arduino Inputs Reading
 
     # Control Variables
     window_ref = 50                 # How Many Samples Before Useful Data
-    grid_ref = 1300                # How Many Samples will the grid Contain
-    maxamp_ref = 0.5                  # From what value is the Data useful (Volts)
-    decay_ref = 1000                # How many samples after the data goes below threshold
-    high_volt = 5.0                 # What is the maximum voltage accepted by the microcontroller (Volts)
-    flag_continuously = False       # Continuous Graph or Sample Data above threshold
-    sample_ref = 1                  # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
+    grid_ref = 30000                # How Many Samples will the grid Contain
+    maxamp_ref = 0.12                  # From what value is the Data useful (Volts)
+    decay_ref = 5000                # How many samples after the data goes below threshold
+    high_volt = 3.3                 # What is the maximum voltage accepted by the microcontroller (Volts)
+    flag_continuously = False     # Continuous Graph or Sample Data above threshold
+    sample_ref = 2                  # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
 
     ##########################################
     ##########   EOF CONTROL ROOM  ###########
