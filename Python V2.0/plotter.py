@@ -33,6 +33,7 @@ global figure_capture
 global flag_continuously
 global flag_plot
 global exit_now
+global bitresolution
 
 # Global Variables Declaration
 plot_data = []
@@ -63,6 +64,7 @@ def plot_figure():
     plt.title("Analogue Piezo Input - Avg Point: " + str(round(avg_point/1000000, 4)) + " ms")
     plt.grid(True)
     plt.ylabel('Voltage Level (V)')
+    plt.xlabel('Sample')
     plt.ticklabel_format(useOffset=False)
 
     # Plot Print A0
@@ -136,6 +138,7 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
     global high_volt
     global exit_now
     global avg_point
+    global bitresolution
     global reset
 
     try:
@@ -155,7 +158,7 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
     window = 0
     decay = 0
     avg_point = 0
-    maxamp_ref = maxamp_ref*1023/high_volt
+    maxamp_ref = maxamp_ref*(bitresolution-1)/high_volt
     sample = []
     time_base = time.perf_counter_ns()
     for i in range(n_inputs):
@@ -177,7 +180,7 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
                     # If samples are below threshold point
                     if not flag_continuously:
                         if window <= window_ref and int(split_data[i]) < maxamp_ref:
-                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                            plot_data[i].append(int(split_data[i])*high_volt/(bitresolution-1))
                             plot_time[i].append(time.perf_counter_ns()-time_base)
                             window = window + 1
 
@@ -186,7 +189,7 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
 
                             # Check if samples are being collected
                             if flag_get is True:
-                                plot_data[i].append(int(split_data[i])*high_volt/1023)
+                                plot_data[i].append(int(split_data[i])*high_volt/(bitresolution-1))
                                 plot_time[i].append(time.perf_counter_ns()-time_base)
                                 decay = decay + 1
 
@@ -208,22 +211,22 @@ def serial_com(com, baud, n_inputs, window_ref, grid_ref, maxamp_ref, decay_ref,
                             flag_get = True
 
                             # Append New data above threshold
-                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                            plot_data[i].append(int(split_data[i])*high_volt/(bitresolution-1))
                             plot_time[i].append(time.perf_counter_ns()-time_base)
 
                     # Continuous Mode
                     else:
-                        if sample[i] == 0:
-                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                        if sample[i] == 0 and int(split_data[i]) < (bitresolution-1):
+                            plot_data[i].append(int(split_data[i])*high_volt/(bitresolution-1))
                             plot_time[i].append(time.perf_counter_ns()-time_base)
                             avg_point = (plot_time[0][-1] - plot_time[0][0])/len(plot_time[i])
                             sample[i] = sample[i] + 1
-                        elif sample[i] == sample_ref:
-                            plot_data[i].append(int(split_data[i])*high_volt/1023)
+                        elif sample[i] == sample_ref and int(split_data[i]) < (bitresolution-1):
+                            plot_data[i].append(int(split_data[i])*high_volt/(bitresolution-1))
                             plot_time[i].append(time.perf_counter_ns()-time_base)
                             avg_point = (plot_time[0][-1] - plot_time[0][0])/len(plot_time[i])
                             sample[i] = 0
-                        elif sample[i] < sample_ref:
+                        elif sample[i] < sample_ref and int(split_data[i]) < (bitresolution-1):
                             sample[i] = sample[i] + 1
                         else:
                             print("Error in Serial, Should Not Happen")
@@ -272,23 +275,25 @@ def main():
     global high_volt
     global flag_continuously
     global reset
+    global bitresolution
 
     ##########################################
     ##########     CONTROL ROOM    ###########
     ##########################################
 
     com = 'COM3'        # Arduino Communication Port
-    baudrate = 2000000  # Arduino Baudrate Communication
-    inputs = 1          # How Many Arduino Inputs Reading
+    baudrate = 115200  # Arduino Baudrate Communication
+    inputs = 2          # How Many Arduino Inputs Reading
 
     # Control Variables
     window_ref = 50                 # How Many Samples Before Useful Data
-    grid_ref = 30000                # How Many Samples will the grid Contain
+    grid_ref = 10000             # How Many Samples will the grid Contain
     maxamp_ref = 0.12                  # From what value is the Data useful (Volts)
     decay_ref = 5000                # How many samples after the data goes below threshold
     high_volt = 3.3                 # What is the maximum voltage accepted by the microcontroller (Volts)
-    flag_continuously = False     # Continuous Graph or Sample Data above threshold
-    sample_ref = 2                  # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
+    flag_continuously = True     # Continuous Graph or Sample Data above threshold
+    sample_ref = 1                  # CONTINUOUS ONLY: How many samples should be skipped (prevent lag)
+    bitresolution = 4096
 
     ##########################################
     ##########   EOF CONTROL ROOM  ###########
@@ -341,6 +346,16 @@ def main():
                 plot_time.append([])
 
             reset = False
+
+        elif user_input == 'print':
+            figure_capture = True
+
+            for i in range(len(plot_data[0])):
+                print(plot_data[0][i]*(bitresolution-1)/(high_volt))
+
+            while figure_capture is True:
+                time.sleep(1)
+
 
         # Help Command
         elif user_input == 'help':
