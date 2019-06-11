@@ -26,21 +26,19 @@ const byte MIDI_n_inputs = 3;   // HOW MANY INPUTS WILL BE READ
 // GENERIC CONTROL VARIABLES
 const bool Serial_print = 1;                  // PRINT MESSAGES TO SERIAL
 const bool debug_print = 0;                   // Print Debug Messages
-const byte input_pitch[MIDI_n_inputs] = {67, 64, 60}; // PITCH ASSOCIATED WITH EACH INPUT
-
-// ORDER GREY, BLACK, RED
+const byte input_pitch[MIDI_n_inputs] = {64, 60, 56}; // PITCH ASSOCIATED WITH EACH INPUT
 
 /////////////////////////////////////////////////
 /////////    PERMANENT  CONFIGURATION   /////////
 /////////////////////////////////////////////////
 
 // TIMER CONTROL VARIABLES
-const int period0 = 100; // RED us
-const int period1 = 100; // GREY us
-const int period2 = 100; // BLACK us
+const int period0 = 150; // RED us
+const int period1 = 150; // GREY us
+const int period2 = 150; // BLACK us
 
 // GENERAL
-const int timer_interval = 30; //us
+const int timer_interval = 40; //us
 const int readPeriod = 500; // us
 
 //MIDI CONTROL VARIABLES
@@ -60,20 +58,18 @@ RingBuffer *buffer2 = new RingBuffer; // BLACK
 // TIMER VARIBALES
 IntervalTimer timer0, timer1, timer2; // timers (RED, GREY, BLACK)
 int startTimerValue0 = 0, startTimerValue1 = 0, startTimerValue2 = 0;
-uint32_t timer_MIDI_OFF[MIDI_n_inputs] = {0, 0, 0};                                // MINIMUM VALUE TO WAIT TO SEND MIFI OFF AFTER INITIAL DELAY (us)
-const uint32_t timer_constant = 750;
+const int timer_MIDI_OFF = 500000;                                // MINIMUM VALUE TO WAIT TO SEND MIFI OFF AFTER INITIAL DELAY (us)
+
 
 // GENERIC CONTROL VARIABLES
 const uint16_t bitresolution = 4095;                                  // BIT RESOLUTION (12 bits)
 
 // MIDI CONTROL VARIABLES
-const uint16_t threshold_MIN[MIDI_n_inputs] = {550, 550, 550};        // MINIMUM VALUE TO ACCEPT AS MESSAGE (0.3 Volt)
+const uint16_t threshold_MIN[MIDI_n_inputs] = {530, 530, 530};        // MINIMUM VALUE TO ACCEPT AS MESSAGE (0.3 Volt)
 const uint16_t threshold_MAX[MIDI_n_inputs] = {4095, 4095, 4095};     // MAXIMUM VALUE TO ACCEPT (3.3 Volt)
-const uint8_t max_samples[MIDI_n_inputs] = {10, 10, 10};                                       // HOW MANY SAMPLES TO COLLECT IN INIT
-const uint8_t threshold_MIN_OFF[MIDI_n_inputs] = {25, 25, 23};        // MINIMUM VALUE TO SEND MIDI NOTE OFF (0.02 Volt)
-const uint16_t max_samples_off[MIDI_n_inputs] = {10, 10, 23};                                   // HOW MANY SAMPLES TO SEND MIDI OFF
-
-// ORDER GREY, BLACK, RED
+const uint8_t max_samples = 10;                                       // HOW MANY SAMPLES TO COLLECT IN INIT
+const uint8_t threshold_MIN_OFF[MIDI_n_inputs] = {25, 25, 25};        // MINIMUM VALUE TO SEND MIDI NOTE OFF (0.02 Volt)
+const uint8_t max_samples_off = 10;                                   // HOW MANY SAMPLES TO SEND MIDI OFF
 
 // CONTROL VARIABLES
 byte unsigned input_state[MIDI_n_inputs];
@@ -93,30 +89,30 @@ void timer0_callback(void) {
 }
 
 void timer1_callback(void) {
-  digitalWriteFast(9, HIGH);
+  digitalWriteFast(5, HIGH);
   adc->startSingleRead(readPin1, ADC_0);
-  digitalWriteFast(9, LOW);
+  digitalWriteFast(1, LOW);
 }
 
 void timer2_callback(void) {
-  digitalWriteFast(5, HIGH);
+  digitalWriteFast(9, HIGH);
   adc->startSingleRead(readPin2, ADC_0);
-  digitalWriteFast(5, LOW);
+  digitalWriteFast(1, LOW);
 }
 
 void adc0_isr() {
 
     uint8_t pin = ADC::sc1a2channelADC0[ADC0_SC1A&ADC_SC1A_CHANNELS]; // the bits 0-4 of ADC0_SC1A have the channel
 
-    // GREY PIN
-    if(pin==readPin1) {
-      digitalWriteFast(11, HIGH);
+    // RED PIN
+    if(pin==readPin0) {
+      digitalWriteFast(3, HIGH);
       if(input_state[0] == 0){
         if((uint16_t) adc->adc0->readSingle() > threshold_MIN[0]){
           max_value[0] = adc->adc0->readSingle();
           input_state[0] = 1;
         }
-      } else if(input_state[0] == 1 && value_counter[0] < max_samples[0]){
+      } else if(input_state[0] == 1 && value_counter[0] < max_samples){
           value_counter[0]++;
           if((uint16_t) adc->adc0->readSingle() > max_value[0]){
             max_value[0] = adc->adc0->readSingle();
@@ -127,22 +123,22 @@ void adc0_isr() {
           } else{
             value_counter[0] = 0;
           }
-          if(value_counter[0] > max_samples_off[0]){
+          if(value_counter[0] > max_samples_off){
             flag_MIDI_OFF[0] = 1;
           }
       }
-      digitalWriteFast(11, LOW);
+      digitalWriteFast(3, LOW);
     }
 
-    // BLACK PIN
-    else if(pin==readPin2) {
+    // GREY PIN
+    else if(pin==readPin1) {
       digitalWriteFast(7, HIGH);
       if(input_state[1] == 0){
         if((uint16_t) adc->adc0->readSingle() > threshold_MIN[1]){
           max_value[1] = adc->adc0->readSingle();
           input_state[1] = 1;
         }
-      } else if(input_state[1] == 1 && value_counter[1] < max_samples[1]){
+      } else if(input_state[1] == 1 && value_counter[1] < max_samples){
           value_counter[1]++;
           if((uint16_t) adc->adc0->readSingle() > max_value[1]){
             max_value[1] = adc->adc0->readSingle();
@@ -153,7 +149,7 @@ void adc0_isr() {
           } else{
             value_counter[1] = 0;
           }
-          if(value_counter[1] > max_samples_off[1]){
+          if(value_counter[1] > max_samples_off){
             flag_MIDI_OFF[1] = 1;
           }
       }
@@ -175,37 +171,31 @@ void adc0_isr() {
 
 void adc1_isr() {
 
-    uint8_t pin = ADC::sc1a2channelADC1[ADC1_SC1A&ADC_SC1A_CHANNELS]; // the bits 0-4 of ADC0_SC1A have the channel
-
-    // RED PIN
-    if(pin==readPin0){
-      digitalWriteFast(3, HIGH);
-      if(input_state[2] == 0){
-        if((uint16_t) adc->adc1->readSingle() > threshold_MIN[2]){
+    digitalWriteFast(11, HIGH);
+    if(input_state[2] == 0){
+      if((uint16_t) adc->adc1->readSingle() > threshold_MIN[2]){
+        max_value[2] = adc->adc1->readSingle();
+        input_state[2] = 1;
+      }
+    } else if(input_state[2] == 1 && value_counter[2] < max_samples){
+        value_counter[2]++;
+        if((uint16_t) adc->adc1->readSingle() > max_value[2]){
           max_value[2] = adc->adc1->readSingle();
-          input_state[2] = 1;
         }
-      } else if(input_state[2] == 1 && value_counter[2] < max_samples[2]){
+    } else if(input_state[2] == 2 && flag_MIDI_OFF[2] == 0){
+        if((uint16_t) adc->adc1->readSingle() < threshold_MIN_OFF[2]){
           value_counter[2]++;
-          if((uint16_t) adc->adc1->readSingle() > max_value[2]){
-            max_value[2] = adc->adc1->readSingle();
-          }
-      } else if(input_state[2] == 2 && flag_MIDI_OFF[2] == 0){
-          if((uint16_t) adc->adc1->readSingle() < threshold_MIN_OFF[2]){
-            value_counter[2]++;
-          } else{
-            value_counter[2] = 0;
-          }
-          if(value_counter[2] > max_samples_off[2]){
-            flag_MIDI_OFF[2] = 1;
-            Serial.println(value_counter[2]);
-          }
-      }
-      else {
-          adc->adc1->readSingle();  // clear interrupt anyway
-      }
-      digitalWriteFast(3, LOW);
+        } else{
+          value_counter[2] = 0;
+        }
+        if(value_counter[2] > max_samples_off){
+          flag_MIDI_OFF[2] = 1;
+        }
     }
+    else {
+        adc->adc1->readSingle();  // clear interrupt anyway
+    }
+    digitalWriteFast(11, LOW);
     // restore ADC config if it was in use before being interrupted by the analog timer
     if (adc->adc1->adcWasInUse) {
         adc->adc1->loadConfig(&adc->adc1->adc_config);  // restore ADC config, and restart conversion
@@ -303,23 +293,21 @@ void loop(){
 
       // STATE 1 - SEND MIDI ON WHEN READY
       if(input_state[pin] == 1){
-        if(value_counter[pin] >= max_samples[pin]){
-          input_state[pin] = 2;
+        if(value_counter[pin] >= max_samples){
           MIDI_sendON(input_pitch[pin], normalizevelocity(max_value[pin], pin));
+          input_state[pin] = 2;
           value_counter[pin] = 0;
           single_timer[pin] = 0;
-          timer_MIDI_OFF[pin] = timer_constant*max_value[pin];
         }
       }
 
       // STATE 2 - SEND MIDI OFF BY INTERRUPT OR TIMER
       if(input_state[pin] == 2){
-        if(single_timer[pin] >= timer_MIDI_OFF[pin] || flag_MIDI_OFF[pin] == 1){
+        if(single_timer[pin] >= timer_MIDI_OFF || flag_MIDI_OFF[pin] == 1){
           MIDI_sendOFF(input_pitch[pin]);
           input_state[pin] = 0;
           flag_MIDI_OFF[pin] = 0;
           value_counter[pin] = 0;
-          timer_MIDI_OFF[pin] = 0;
         }
       }
     }
