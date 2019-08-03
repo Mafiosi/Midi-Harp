@@ -1,5 +1,37 @@
+##### Platform IO
+# Platform IO Configuration Files
+
 .pio
 .pioenvs
 .piolibdeps
 .clang_complete
 .gcc-flags.json
+
+##### Dropbox
+# Dropbox settings and caches
+.dropbox
+.dropbox.attr
+.dropbox.cache
+
+##### Notepad++
+# Notepad++ backups #
+*.bak
+
+##### C++
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Executables
+*.exe
+*.out
+*.app

@@ -61,6 +61,7 @@ def main():
         plot_freq_true.append(interval*i)
 
     plot_freq_true.append(true_sample_freq)
+    
     # Check for Correct Behaviour
     try:
         serial_main = serial
