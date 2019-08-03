@@ -36,4 +36,4 @@ It is also possible to send the MIDI message by performing an analysis in the fr
 The Graphical Visualizers for both raw analog signal output and Fast Fourier Transform result allow control full over the data window and data collection in real-time  
 
 ### Author
-**João Beleza**
+**João Beleza*
