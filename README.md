@@ -24,7 +24,7 @@ This Repository Contains:
 - ADC(s) Validation - Allows finer tuning of internal ADC configurations regarding timing windows (C++)
 - MIDI Converter - MAIN PROJECT - Converts string vibration of an harp into a MIDI message (C++)
 
-All of these programs are cointained within this repository.
+All of these programs are cointained within this repository.  
 There are also several results examples from the graphical Interface as well the ADC Validation within
 the folder "Graphical Result".
 
