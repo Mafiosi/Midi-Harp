@@ -7,6 +7,10 @@
 .clang_complete
 .gcc-flags.json
 
+##### Generic Data
+# Configuration Files
+.yml
+
 ##### Dropbox
 # Dropbox settings and caches
 .dropbox
