@@ -31,7 +31,7 @@ The Main Program - MIDI Converter - allows both to send data as a MIDI message a
 
 This program can perform for both Celtic and Pedal Harps (using the Teensy 3.5) with an average delay of 1ms using averaging and redundance techniques  
 
-It is also possible to send the MIDI message by performing an analysis in the frequency domain using the Fast Fourier Transform for an auto-tuning implementation. The trade-off in this implementation is an average delay of 5-8ms (NOT RECOMMENDED AS IT IS)  
+It is also possible to send the MIDI message by performing an analysis in the frequency domain using the Fast Fourier Transform for an auto-tuning implementation. The trade-off in this implementation is an average delay of 5-8ms  (NOT RECOMMENDED AS IT IS)  
 
 The Graphical Visualizers for both raw analog signal output and Fast Fourier Transform result allow control full over the data window and data collection in real-time  
 
